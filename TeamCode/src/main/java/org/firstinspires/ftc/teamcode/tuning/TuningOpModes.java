@@ -246,7 +246,7 @@ public final class TuningOpModes {
                     ));
                     parEncs.add(new EncoderRef(0, 0));
                     perpEncs.add(new EncoderRef(0, 1));
-                }  else if (td.localizer instanceof PinpointLocalizer) {
+                } else if (td.localizer instanceof PinpointLocalizer) {
                     PinpointView pv = makePinpointView((PinpointLocalizer) td.localizer);
                     encoderGroups.add(new PinpointEncoderGroup(pv));
                     parEncs.add(new EncoderRef(0, 0));

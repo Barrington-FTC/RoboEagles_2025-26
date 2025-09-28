@@ -6,7 +6,9 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 @Config
@@ -16,9 +18,20 @@ public class TestTeleOp extends LinearOpMode {
     private DcMotor leftBackDrive = null;
     private DcMotor rightFrontDrive = null;
     private DcMotor rightBackDrive = null;
+    private DcMotor leftFlyWheel = null;
+    private DcMotor rightFlyWheel = null;
+    private DcMotor intake = null;
+    private Servo pitchLeft = null;
+    private Servo pitchRight = null;
+    private CRServo beltFront = null;//CRServo means continuous rotation for all you new gens
+    private CRServo beltBack = null;
+    private Servo timingServo = null;
+    private Servo doorServo = null;
+
 
     @Override
     public void runOpMode() {
+        //base
         leftFrontDrive = hardwareMap.get(DcMotor.class, "leftFrontDrive");
         leftBackDrive = hardwareMap.get(DcMotor.class, "leftBackDrive");
         rightFrontDrive = hardwareMap.get(DcMotor.class, "rightFrontDrive");
@@ -28,6 +41,24 @@ public class TestTeleOp extends LinearOpMode {
         rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightBackDrive.setDirection(DcMotor.Direction.FORWARD);
         setDriveMotorsZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+        //Servos
+        pitchLeft = hardwareMap.get(Servo.class, "pitchLeft");
+        pitchRight = hardwareMap.get(Servo.class, "pitchRight");
+        timingServo = hardwareMap.get(Servo.class, "pitchRight");
+        doorServo = hardwareMap.get(Servo.class, "pitchRight");
+        beltFront = hardwareMap.get(CRServo.class, "beltFront");
+        beltBack = hardwareMap.get(CRServo.class, "beltBack");
+
+        //Fly-wheel
+        leftFlyWheel = hardwareMap.get(DcMotor.class, "leftFlyWheel");
+        leftFlyWheel.setDirection(DcMotor.Direction.FORWARD);
+        rightFlyWheel = hardwareMap.get(DcMotor.class, "rightFlyWheel");
+        rightFlyWheel.setDirection(DcMotor.Direction.REVERSE);
+        //Intakes
+        intake = hardwareMap.get(DcMotor.class, "intake");
+        intake.setDirection(DcMotor.Direction.FORWARD);
+
 
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         telemetry.addData("Status", "Initialized");
@@ -69,6 +100,32 @@ public class TestTeleOp extends LinearOpMode {
             rightFrontDrive.setPower(rightFrontPower);
             leftBackDrive.setPower(leftBackPower);
             rightBackDrive.setPower(rightBackPower);
+
+            //intake for player1 does both belt and intake motor
+            //forward
+            if(gamepad2.right_trigger>0){
+                intake.setPower(1);
+                beltFront.setPower(gamepad2.right_trigger);
+                beltBack.setPower(gamepad2.right_trigger);
+            }
+            //reverse
+            if(gamepad2.left_trigger>0){
+                intake.setPower(-1);
+                beltFront.setPower(-gamepad2.right_trigger);
+                beltBack.setPower(-gamepad2.right_trigger);
+            }
+
+            //Control for the conveyor belt for player 2
+            if(gamepad2.right_stick_y>0 || gamepad2.right_stick_y<0){
+                beltFront.setPower(-gamepad2.right_stick_y);
+                beltBack.setPower(-gamepad2.right_stick_y);
+            }
+
+            //control for only intake for player 2
+            if(gamepad2.left_stick_y>0 || gamepad2.left_stick_y<0){
+                beltFront.setPower(-gamepad2.left_stick_y);
+                beltBack.setPower(-gamepad2.left_stick_y);
+            }
 
             // --------------------------- TELEMETRY --------------------------- //
             // Show the elapsed game time and wheel power.

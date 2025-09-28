@@ -68,7 +68,8 @@ public class TestTeleOp extends LinearOpMode {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-
+        Thread LeftPID = new Thread(this::leftFlyWheelPIDLoop);
+        Thread RightPID = new Thread(this::rightFlyWheelPIDLoop);
         waitForStart();
 
         while (opModeIsActive()) {
@@ -152,7 +153,20 @@ public class TestTeleOp extends LinearOpMode {
         }
     }
 
+    private void leftFlyWheelPIDLoop() {
+        pid left = new pid(leftFlyWheel);
+        while (opModeIsActive()) {
+            //works when robot is not moving
+            if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
+                double power = left.update(0);
+                leftFlyWheel.setPower(power);
+            }
+            sleep(1);
+        }
+    }
+
     // Dedicated method for the PID loop
+    /*
     private void leftFlyWheelPIDLoop(double targetRPM) {
         pid left = new pid(leftFlyWheel);
         while (opModeIsActive()) {
@@ -164,6 +178,20 @@ public class TestTeleOp extends LinearOpMode {
             sleep(1);
         }
     }
+
+     */
+    private void rightFlyWheelPIDLoop() {
+        pid right = new pid(rightFlyWheel);
+        while (opModeIsActive()) {
+            //works when robot is not moving
+            if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
+                double power = right.update(0);
+                leftFlyWheel.setPower(power);
+            }
+            sleep(1);
+        }
+    }
+    /*
     private void rightFlyWheelPIDLoop(double targetRPM) {
         pid right = new pid(rightFlyWheel);
         while (opModeIsActive()) {
@@ -175,6 +203,8 @@ public class TestTeleOp extends LinearOpMode {
             sleep(1);
         }
     }
+
+     */
     private void setDriveMotorsZeroPowerBehavior(DcMotor.ZeroPowerBehavior behavior) {
         leftFrontDrive.setZeroPowerBehavior(behavior);
         leftBackDrive.setZeroPowerBehavior(behavior);

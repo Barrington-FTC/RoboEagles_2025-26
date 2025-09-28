@@ -42,9 +42,9 @@ public class TestTeleOp extends LinearOpMode {
             double lateral = Math.pow(gamepad1.left_stick_x, 3);
             double yaw = Math.pow(gamepad1.right_stick_x, 3);
             double leftFrontPower = gamepad1.dpad_left ? 1 : axial + lateral + yaw;
-            double rightFrontPower = gamepad1.dpad_right ? 1 : axial - lateral - yaw;
+            double rightFrontPower = gamepad1.dpad_right ? 1 : axial + lateral - yaw;
             double leftBackPower = gamepad1.dpad_down ? 1 : axial - lateral + yaw;
-            double rightBackPower = gamepad1.dpad_up ? 1 : axial + lateral - yaw;
+            double rightBackPower = gamepad1.dpad_up ? 1 : axial - lateral - yaw;
 
             double max = Math.max(Math.abs(leftFrontPower), Math.abs(rightFrontPower));
             max = Math.max(max, Math.abs(leftBackPower));

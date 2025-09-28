@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.rpm.initializeFlywheels;
+
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 
@@ -27,12 +29,6 @@ public class TestTeleOp extends LinearOpMode {
     private CRServo beltBack = null;
     private Servo timingServo = null;
     private Servo doorServo = null;
-    private double leftFlywheelPrevTime = 0;
-    private int leftFlywheelPrevEncoder = 0;
-    private double rightFlywheelPrevTime = 0;
-    private int rightFlywheelPrevEncoder = 0;
-    public static final double FLYWHEEL_MOTOR_TICKS_PER_REV = 28; // not sure if right but found on https://www.gobilda.com/5203-series-yellow-jacket-motor-1-1-ratio-24mm-length-8mm-rex-shaft-6000-rpm-3-3-5v-encoder/
-
 
 
     @Override
@@ -72,16 +68,11 @@ public class TestTeleOp extends LinearOpMode {
         telemetry.addData("Status", "Initialized");
         telemetry.update();
 
-// Inside your runOpMode() method, before the while loop:
-
-        leftFlywheelPrevTime = getRuntime(); // Initialize previous time
-        leftFlywheelPrevEncoder = leftFlyWheel.getCurrentPosition();
-        rightFlywheelPrevTime = getRuntime();
-        rightFlywheelPrevEncoder = rightFlyWheel.getCurrentPosition();
 
         waitForStart();
 
         while (opModeIsActive()) {
+
             double currentTime = getRuntime();
             // --------------------------- WHEELS --------------------------- //
             // POV Mode uses left joystick to go forward & strafe, and right joystick to rotate.
@@ -130,7 +121,6 @@ public class TestTeleOp extends LinearOpMode {
                 beltFront.setPower(-gamepad2.right_trigger);
                 beltBack.setPower(-gamepad2.right_trigger);
             }
-
             //Control for the conveyor belt for player 2
             if(gamepad2.right_stick_y>0 || gamepad2.right_stick_y<0){
                 beltFront.setPower(-gamepad2.right_stick_y);
@@ -142,28 +132,9 @@ public class TestTeleOp extends LinearOpMode {
                 beltFront.setPower(-gamepad2.left_stick_y);
                 beltBack.setPower(-gamepad2.left_stick_y);
             }
-            //RPM for the FlyWheels
-            // Left Flywheel
-            int currentLeftEncoder = leftFlyWheel.getCurrentPosition();
-            double leftDt = currentTime - leftFlywheelPrevTime;
-            double leftFlywheelRPM = 0;
-            if (leftDt > 0) {
-                double deltaTicksLeft = currentLeftEncoder - leftFlywheelPrevEncoder;
-                leftFlywheelRPM = (deltaTicksLeft / FLYWHEEL_MOTOR_TICKS_PER_REV) / (leftDt / 60.0); //The RPM
-            }
-            leftFlywheelPrevTime = currentTime;
-            leftFlywheelPrevEncoder = currentLeftEncoder;
 
-            // Right Flywheel
-            int currentRightEncoder = rightFlyWheel.getCurrentPosition();
-            double rightDt = currentTime - rightFlywheelPrevTime;
-            double rightFlywheelRPM = 0;
-            if (rightDt > 0) {
-                double deltaTicksRight = currentRightEncoder - rightFlywheelPrevEncoder;
-                rightFlywheelRPM = (deltaTicksRight / FLYWHEEL_MOTOR_TICKS_PER_REV) / (rightDt / 60.0); //The RPM
-            }
-            rightFlywheelPrevTime = currentTime;
-            rightFlywheelPrevEncoder = currentRightEncoder;
+            initializeFlywheels();
+
             // --------------------------- TELEMETRY --------------------------- //
 
             telemetry.addData("Front left/Right", "%4.2f, %4.2f",
@@ -175,13 +146,35 @@ public class TestTeleOp extends LinearOpMode {
                     beltFront.getPower(), beltBack.getPower());
             telemetry.addData("Intake", "%4.2f", intake.getPower());
 
-            telemetry.addData("Flywheel RPM Left/Right", "%4.2f,%4.2f", rightFlywheelRPM, leftFlywheelRPM);
+            telemetry.addData("Flywheel RPM Left/Right", "%4.2f,%4.2f",rpm.getLeftRPM(),rpm.getRightRPM());
 
             telemetry.update();
         }
     }
 
     // Dedicated method for the PID loop
+    private void leftFlyWheelPIDLoop(double targetRPM) {
+        pid left = new pid(leftFlyWheel);
+        while (opModeIsActive()) {
+            //works when robot is not moving
+            if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
+                double power = left.update(targetRPM);
+                leftFlyWheel.setPower(power);
+            }
+            sleep(1);
+        }
+    }
+    private void rightFlyWheelPIDLoop(double targetRPM) {
+        pid right = new pid(rightFlyWheel);
+        while (opModeIsActive()) {
+            //works when robot is not moving
+            if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
+                double power = right.update(targetRPM);
+                leftFlyWheel.setPower(power);
+            }
+            sleep(1);
+        }
+    }
     private void setDriveMotorsZeroPowerBehavior(DcMotor.ZeroPowerBehavior behavior) {
         leftFrontDrive.setZeroPowerBehavior(behavior);
         leftBackDrive.setZeroPowerBehavior(behavior);

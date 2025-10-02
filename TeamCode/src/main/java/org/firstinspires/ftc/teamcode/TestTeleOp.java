@@ -49,9 +49,32 @@ public class TestTeleOp extends LinearOpMode {
     //Lime Light
     private static final boolean USE_WEBCAM = true;  // true for webcam, false for phone camera
     private Limelight3A limelight;
+    private int tagID = 0;
     private AprilTagProcessor aprilTag;
-
     private VisionPortal visionPortal;
+    // calculations
+    private double verticaOffset = 0; //change when robot is built
+
+    private double tagHeigth = 0; // should be the height of april tag
+
+    private double targetHeight = 0;// should be a height above the edge of the rim.
+
+    private double limLightHeight = 0;// limelight distance from the ground
+
+    private double launcherHeight = 0;// height of launcher
+    private double distance3D = 0; //distance in 3d space
+
+    private double Distancex = 0; //Distance across the ground
+    private double XA = 0;//horizontal angle in radians
+    private double YA = 0;//vertical angle in radians
+    private double g = 9.81;
+    private double VF = 0;
+
+    private double PI = 3.1415;
+
+
+
+
     @Override
     public void runOpMode() {
         //base
@@ -94,7 +117,6 @@ public class TestTeleOp extends LinearOpMode {
         Thread LeftPIDThread = new Thread(this::leftFlyWheelPIDLoop);
         Thread RightPIDThread = new Thread(this::rightFlyWheelPIDLoop);
         //April Tag
-        initAprilTag();
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         telemetry.setMsTransmissionInterval(11);
         limelight.pipelineSwitch(1);// look here for the recommended settings.
@@ -103,7 +125,6 @@ public class TestTeleOp extends LinearOpMode {
 
 
         while (opModeIsActive()) {
-            telemetryAprilTag();
             telemetry.update();
             initializeFlywheels();
             double currentTime = getRuntime();
@@ -167,66 +188,55 @@ public class TestTeleOp extends LinearOpMode {
                 beltBack.setPower(-gamepad2.left_stick_y);
             }
             //Lime Light
-            LLResult result = limelight.getLatestResult();
-            LLStatus status = limelight.getStatus();
-            telemetry.addData("Name", "%s",
-                    status.getName());
-            telemetry.addData("LL", "Temp: %.1fC, CPU: %.1f%%, FPS: %d",
-                    status.getTemp(), status.getCpu(),(int)status.getFps());
-            telemetry.addData("Pipeline", "Index: %d, Type: %s",
-                    status.getPipelineIndex(), status.getPipelineType());
 
-            if (result != null) {
-                // Access general information
-                double captureLatency = result.getCaptureLatency();
-                double targetingLatency = result.getTargetingLatency();
-                double parseLatency = result.getParseLatency();
-                telemetry.addData("LL Latency", captureLatency + targetingLatency);
-                telemetry.addData("Parse Latency", parseLatency);
-                telemetry.addData("PythonOutput", java.util.Arrays.toString(result.getPythonOutput()));
-                int id;
-                double xa;// x angle right or left
-                double ya;//y angle up or down should always be up though
-                double distance;
-                if (result.isValid()) {
-                    List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
-                    for (LLResultTypes.FiducialResult fiducial : fiducials) {
-                        id = fiducial.getFiducialId(); // The ID number of the fiducial
-                        xa = fiducial.getTargetXDegrees(); // Where it is (left-right)
-                        xa= Math.toRadians(xa);
-                        ya = fiducial.getTargetYDegrees(); // Where it is (up-down)
-                        ya= Math.toRadians(ya);
-
-                        distance =
-                        telemetry.addData("Fiducial " + id, "is " + distance + " meters away");
-                    }
-                    telemetry.addData("tx", result.getTx());
-                    telemetry.addData("txnc", result.getTxNC());
-                    telemetry.addData("ty", result.getTy());
-                    telemetry.addData("tync", result.getTyNC());
-
-
-                    // Access fiducial results. dont know if we need this
-                    List<LLResultTypes.FiducialResult> fiducialResults = result.getFiducialResults();
-                    for (LLResultTypes.FiducialResult fr : fiducialResults) {
-                        telemetry.addData("Fiducial", "ID: %d, Family: %s, X: %.2f, Y: %.2f", fr.getFiducialId(), fr.getFamily(),fr.getTargetXDegrees(), fr.getTargetYDegrees());
-                    }
-
-                }
-            } else {
-                telemetry.addData("Limelight", "No data available");
-            }
-
-            telemetry.update();
-        }
-        limelight.stop();
             if(gamepad2.a){
-                // add limlight calculations here
-                targetRPM = 3000;
+                LLResult result = limelight.getLatestResult();
+                LLStatus status = limelight.getStatus();
+                telemetry.addData("Name", "%s",
+                        status.getName());
+                telemetry.addData("LL", "Temp: %.1fC, CPU: %.1f%%, FPS: %d",
+                        status.getTemp(), status.getCpu(),(int)status.getFps());
+                telemetry.addData("Pipeline", "Index: %d, Type: %s",
+                        status.getPipelineIndex(), status.getPipelineType());
 
+                if (result != null) {
+                    // Access general information
+                    double captureLatency = result.getCaptureLatency();
+                    double targetingLatency = result.getTargetingLatency();
+                    double parseLatency = result.getParseLatency();
+                    telemetry.addData("LL Latency", captureLatency + targetingLatency);
+                    telemetry.addData("Parse Latency", parseLatency);
+                    telemetry.addData("PythonOutput", java.util.Arrays.toString(result.getPythonOutput()));
+                    int id;
+                    if (result.isValid()) {
+                        List<LLResultTypes.FiducialResult> fiducials = result.getFiducialResults();
+                        for (LLResultTypes.FiducialResult fiducial : fiducials) {
+                            id = fiducial.getFiducialId(); // The ID number of the fiducial
+                             XA = fiducial.getTargetXDegrees(); // Where it is (left-right)
+                            XA= Math.toRadians(XA);
+                            double ya = fiducial.getTargetYDegrees(); // Where it is (up-down)
+                            ya= Math.toRadians(YA);
+                            double y = targetHeight - launcherHeight;
+                            // 3D straight-line distance from limelight
+                            double d = (tagHeigth - limLightHeight) * Math.cos(ya);
+                            // Ground projection (distance on XY plane)
+                            Distancex = (tagHeigth - limLightHeight) * Math.cos(ya);
+                            distance3D = Math.sqrt(y*y + Distancex*Distancex);
+                            YA = Math.acos(distance3D/Distancex);
+                            double x = Distancex;
+                            telemetry.addData("Fiducial " + id, "(x,y) " + "("+x+"," +y+","+")"+ " meters away from camera");
+                        }
+                    }
+                } else {
+                    telemetry.addData("Limelight", "No data available");
+                }
+                telemetry.update();
             }
-            else{
-                visionPortal.stopStreaming();
+                limelight.stop();
+                VF = Math.sqrt((g*Distancex*Distancex)/(2*Math.pow(Math.cos(YA),2)+(Distancex*Math.tan(YA) + launcherHeight - targetHeight)));
+                targetRPM = Math.toIntExact(Math.round((60 * VF) / (2 * PI)));
+                // add limlight calculations here
+
             }
 
             // --------------------------- TELEMETRY --------------------------- //
@@ -244,101 +254,13 @@ public class TestTeleOp extends LinearOpMode {
 
             telemetry.update();
         }
-    //April Tag example from website
-    private void initAprilTag() {
-
-        // Create the AprilTag processor.
-        aprilTag = new AprilTagProcessor.Builder()
-
-                // The following default settings are available to un-comment and edit as needed.
-                .setDrawAxes(false)
-                .setDrawCubeProjection(false)
-                .setDrawTagOutline(true)
-                .setTagFamily(AprilTagProcessor.TagFamily.TAG_36h11)
-                .setTagLibrary(AprilTagGameDatabase.getCenterStageTagLibrary())
-                .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
-
-                // == CAMERA CALIBRATION ==
-                // If you do not manually specify calibration parameters, the SDK will attempt
-                // to load a predefined calibration for your camera.
-                .setLensIntrinsics(578.272, 578.272, 402.145, 221.506)
-                // ... these parameters are fx, fy, cx, cy.
-
-                .build();
-
-        // Adjust Image Decimation to trade-off detection-range for detection-rate.
-        // eg: Some typical detection data using a Logitech C920 WebCam
-        // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
-        // Decimation = 2 ..  Detect 2" Tag from 6  feet away at 22 Frames per second
-        // Decimation = 3 ..  Detect 2" Tag from 4  feet away at 30 Frames Per Second (default)
-        // Decimation = 3 ..  Detect 5" Tag from 10 feet away at 30 Frames Per Second (default)
-        // Note: Decimation can be changed on-the-fly to adapt during a match.
-        //aprilTag.setDecimation(3);
-
-        // Create the vision portal by using a builder.
-        VisionPortal.Builder builder = new VisionPortal.Builder();
-
-        // Set the camera (webcam vs. built-in RC phone camera).
-        if (USE_WEBCAM) {
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-        } else {
-            builder.setCamera(BuiltinCameraDirection.FRONT);
-        }
-
-        // Choose a camera resolution. Not all cameras support all resolutions.
-        //builder.setCameraResolution(new Size(640, 480));
-
-        // Enable the RC preview (LiveView).  Set "false" to omit camera monitoring.
-        builder.enableLiveView(true);
-
-        // Set the stream format; MJPEG uses less bandwidth than default YUY2.
-        builder.setStreamFormat(VisionPortal.StreamFormat.MJPEG);
-
-        // Choose whether or not LiveView stops if no processors are enabled.
-        // If set "true", monitor shows solid orange screen if no processors enabled.
-        // If set "false", monitor shows camera view without annotations.
-        builder.setAutoStopLiveView(false);
-
-        // Set and enable the processor.
-        builder.addProcessor(aprilTag);
-        visionPortal = builder.build();
-
-        // Disable or re-enable the aprilTag processor at any time.
-        visionPortal.setProcessorEnabled(aprilTag, true);
-
-    }
-    private void telemetryAprilTag() {
-
-        List<AprilTagDetection> currentDetections = aprilTag.getDetections();
-        telemetry.addData("# AprilTags Detected", currentDetections.size());
-
-        // Step through the list of detections and display info for each one.
-        for (AprilTagDetection detection : currentDetections) {
-            if (detection.metadata != null) {
-                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                telemetry.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-            } else {
-                telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
-                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
-            }
-        }   // end for() loop
-
-        // Add "key" information to telemetry
-        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
-        telemetry.addLine("RBE = Range, Bearing & Elevation");
-
-    }// end of Apirl tag
 
     //PID
     private void leftFlyWheelPIDLoop() {
-        pid left = new pid(leftFlyWheel);
         while (opModeIsActive()) {
             //works when robot is not moving
             if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
-                double power = left.update(targetRPM);
+                double power = leftPid.update(targetRPM);
                 leftFlyWheel.setPower(power);
             }
             sleep(1);
@@ -346,12 +268,11 @@ public class TestTeleOp extends LinearOpMode {
     }
 
     private void rightFlyWheelPIDLoop() {
-        pid right = new pid(rightFlyWheel);
         while (opModeIsActive()) {
             //works when robot is not moving
             if (gamepad1.right_stick_x == 0 && gamepad1.right_stick_y == 0) {
-                double power = right.update(targetRPM);
-                leftFlyWheel.setPower(power);
+                double power = rightPid.update(targetRPM);
+                rightFlyWheel.setPower(power);
             }
             sleep(1);
         }

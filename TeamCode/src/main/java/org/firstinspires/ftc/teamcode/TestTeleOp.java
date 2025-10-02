@@ -152,7 +152,6 @@ public class TestTeleOp extends LinearOpMode {
             telemetry.update();
         }
     }
-    
 
     private void leftFlyWheelPIDLoop() {
         pid left = new pid(leftFlyWheel);
@@ -165,7 +164,6 @@ public class TestTeleOp extends LinearOpMode {
             sleep(1);
         }
     }
-
     private void rightFlyWheelPIDLoop() {
         pid right = new pid(rightFlyWheel);
         while (opModeIsActive()) {

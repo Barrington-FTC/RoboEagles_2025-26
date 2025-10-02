@@ -69,7 +69,7 @@ public class TestTeleOp extends LinearOpMode {
     private double YA = 0;//vertical angle in radians
     private double g = 9.81;
     private double VF = 0;
-
+    private double flyWheelRadius=0;
     private double PI = 3.1415;
 
 
@@ -234,7 +234,7 @@ public class TestTeleOp extends LinearOpMode {
             }
                 limelight.stop();
                 VF = Math.sqrt((g*Distancex*Distancex)/(2*Math.pow(Math.cos(YA),2)+(Distancex*Math.tan(YA) + launcherHeight - targetHeight)));
-                targetRPM = Math.toIntExact(Math.round((60 * VF) / (2 * PI)));
+                targetRPM = Math.toIntExact(Math.round((60 * VF) / (2 * PI * flyWheelRadius)));
                 // add limlight calculations here
 
             }

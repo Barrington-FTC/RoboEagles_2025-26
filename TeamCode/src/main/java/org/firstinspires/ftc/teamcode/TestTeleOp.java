@@ -134,8 +134,6 @@ public class TestTeleOp extends LinearOpMode {
             telemetry.addData("Pitch", pitch.getPosition());
             telemetry.addData("tx",tx);
             telemetry.addData("Turret", turret.getCurrentPosition());
-
-
             telemetry.update();
         }
     }
@@ -145,7 +143,12 @@ public class TestTeleOp extends LinearOpMode {
             tx = result.getTx();
             ta = result.getTa();
             vf = -76.61854*ta+2276.22264;
-            flyWheel.setVelocity(vf);
+            if(ta < 0.1&&ta>5){
+                flyWheel.setVelocity(vf);
+            }
+            if(tx>15||tx<-15){
+                flyWheel.setVelocity(0);
+            }
             sleep(20);
         }
     }
